@@ -1,28 +1,55 @@
 """Implementation of the KNX date data point."""
 from __future__ import annotations
 
-from typing import NamedTuple
+from collections.abc import Mapping
+from dataclasses import dataclass
+from typing import Any
 
 from xknx.exceptions import ConversionError
 
-from .dpt import DPTBase
+from .dpt import DPTComplex, DPTComplexData
 from .payload import DPTArray, DPTBinary
 
 
-class XYYColor(NamedTuple):
+@dataclass
+class XYYColor(DPTComplexData):
     """
     Representation of XY color with brightness.
 
     `color`: tuple(x-axis, y-axis) each 0..1; None if invalid.
     `brightness`: int 0..255; None if invalid.
-    tuple(tuple(float, float) | None, int | None)
     """
 
     color: tuple[float, float] | None = None
     brightness: int | None = None
 
+    def from_dict(self, data: Mapping[str, Any]) -> XYYColor:
+        """Init from a dictionary."""
+        color = None
+        if (x_axis := data.get("x_axis")) is not None and (
+            y_axis := data.get("y_axis")
+        ) is not None:
+            try:
+                x_axis = float(data["x_axis"])
+                y_axis = float(data["y_axis"])
+                if not 0 <= x_axis <= 1 or not 0 <= y_axis <= 1:
+                    raise ValueError
+                color = (x_axis, y_axis)
+            except (ValueError, TypeError):
+                raise ConversionError("invalid x_axis or y_axis")
 
-class DPTColorXYY(DPTBase):
+        return XYYColor(color=color, brightness=data.get("brightness"))
+
+    def to_dict(self) -> dict[str, str | int | float | bool | None]:
+        """Create a JSON serializable dictionary."""
+        return {
+            "x_axis": self.color[0] if self.color is not None else None,
+            "y_axis": self.color[1] if self.color is not None else None,
+            "brightness": self.brightness,
+        }
+
+
+class DPTColorXYY(DPTComplex[XYYColor]):
     """Abstraction for KNX 6 octet color xyY (DPT 242.600)."""
 
     payload_type = DPTArray
@@ -52,13 +79,9 @@ class DPTColorXYY(DPTBase):
         )
 
     @classmethod
-    def to_knx(
-        cls, value: XYYColor | tuple[tuple[float, float] | None, int | None]
-    ) -> DPTArray:
+    def to_knx(cls, value: XYYColor) -> DPTArray:
         """Serialize to KNX/IP raw data."""
         try:
-            if not isinstance(value, XYYColor):
-                value = XYYColor(*value)
             color_valid = False
             brightness_valid = False
             x_axis, y_axis, brightness = 0, 0, 0
