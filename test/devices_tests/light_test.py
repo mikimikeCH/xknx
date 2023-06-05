@@ -1073,7 +1073,7 @@ class TestLight:
             group_address_switch="1/2/3",
             group_address_xyy_color="1/2/4",
         )
-        await light.set_xyy_color(((0.52, 0.31), 25))
+        await light.set_xyy_color({"x_axis": 0.52, "y_axis": 0.31, "brightness": 25})
         assert xknx.telegrams.qsize() == 1
         telegram = xknx.telegrams.get_nowait()
         assert telegram == Telegram(
@@ -1081,7 +1081,11 @@ class TestLight:
             payload=GroupValueWrite(DPTArray((0x85, 0x1E, 0x4F, 0x5C, 0x19, 0x03))),
         )
         await xknx.devices.process(telegram)
-        assert light.current_xyy_color == ((0.52, 0.31), 25)
+        assert light.current_xyy_color == {
+            "x_axis": 0.52,
+            "y_axis": 0.31,
+            "brightness": 25,
+        }
 
     async def test_set_xyy_color_not_possible(self):
         """Test setting XYY value of a light not supporting it."""
@@ -1093,7 +1097,7 @@ class TestLight:
             group_address_color="1/2/4",
         )
         with patch("logging.Logger.warning") as mock_warn:
-            await light.set_xyy_color(((0.5, 0.3), 25))
+            await light.set_xyy_color({"x_axis": 0.5, "y_axis": 0.3, "brightness": 25})
 
             assert xknx.telegrams.qsize() == 0
             mock_warn.assert_called_with(
@@ -1555,7 +1559,11 @@ class TestLight:
                 payload=GroupValueWrite(DPTArray((0x2E, 0x14, 0x40, 0x00, 0x55, 0x02))),
             )
         )
-        assert light.current_xyy_color == ((0.18, 0.25), None)
+        assert light.current_xyy_color == {
+            "x_axis": 0.18,
+            "y_axis": 0.25,
+            "brightness": None,
+        }
         # add valid brightness
         await light.process(
             Telegram(
@@ -1563,7 +1571,11 @@ class TestLight:
                 payload=GroupValueWrite(DPTArray((0x2E, 0x14, 0x40, 0x00, 0x55, 0x03))),
             )
         )
-        assert light.current_xyy_color == ((0.18, 0.25), 85)
+        assert light.current_xyy_color == {
+            "x_axis": 0.18,
+            "y_axis": 0.25,
+            "brightness": 85,
+        }
         # invalid color
         await light.process(
             Telegram(
@@ -1571,7 +1583,11 @@ class TestLight:
                 payload=GroupValueWrite(DPTArray((0xD1, 0xEB, 0xB0, 0xA3, 0xA5, 0x01))),
             )
         )
-        assert light.current_xyy_color == ((0.18, 0.25), 165)
+        assert light.current_xyy_color == {
+            "x_axis": 0.18,
+            "y_axis": 0.25,
+            "brightness": 165,
+        }
         # both valid
         await light.process(
             Telegram(
@@ -1579,7 +1595,11 @@ class TestLight:
                 payload=GroupValueWrite(DPTArray((0xD1, 0xEB, 0xB0, 0xA3, 0xA5, 0x03))),
             )
         )
-        assert light.current_xyy_color == ((0.82, 0.69), 165)
+        assert light.current_xyy_color == {
+            "x_axis": 0.82,
+            "y_axis": 0.69,
+            "brightness": 165,
+        }
         # invalid brightness
         await light.process(
             Telegram(
@@ -1587,7 +1607,11 @@ class TestLight:
                 payload=GroupValueWrite(DPTArray((0x2E, 0x14, 0x40, 0x00, 0x00, 0x02))),
             )
         )
-        assert light.current_xyy_color == ((0.18, 0.25), 165)
+        assert light.current_xyy_color == {
+            "x_axis": 0.18,
+            "y_axis": 0.25,
+            "brightness": 165,
+        }
 
     async def test_process_tunable_white(self):
         """Test process / reading telegrams from telegram queue. Test if tunable white is processed."""
